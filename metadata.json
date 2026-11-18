@@ -1,0 +1,6 @@
+{
+  "name": "LumaCam",
+  "description": "Flagship Android CameraX photography and 30fps H.265 HEVC video camera app with hardware resolution detection, configurable bitrate up to 350 Mbps, live external microphone routing, real-time GLSL effects, Portrait Bokeh extension support, torch modes, and mirror correction.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

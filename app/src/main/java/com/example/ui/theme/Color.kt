@@ -1,0 +1,46 @@
+package com.example.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+// Flagship Optical / Studio Palette (System Default Dark & Light compatible + Dark Viewfinder HUD)
+val AmberPro = Color(0xFFFFB74D)
+val AmberProDark = Color(0xFFE68A00)
+val SapphireAccent = Color(0xFF64B5F6)
+val SapphireAccentDark = Color(0xFF1E88E5)
+val CrimsonRecord = Color(0xFFFF3B30)
+val EmeraldActive = Color(0xFF34C759)
+
+// Viewfinder HUD translucent surfaces (always dark over live camera feed for contrast)
+val HudBackdrop = Color(0xB3090B10)
+val HudSurfaceElevated = Color(0xCC141821)
+val HudSurfaceSubtle = Color(0x88181D27)
+val HudBorder = Color(0x33FFFFFF)
+val HudOnDark = Color(0xFFF5F7FA)
+val HudOnDarkMuted = Color(0xFFA7B0C0)
+
+// Fallback Light / Dark M3 Tokens when Dynamic Color is unavailable
+val LightPrimary = Color(0xFF0F4C81)
+val LightOnPrimary = Color(0xFFFFFFFF)
+val LightPrimaryContainer = Color(0xFFD6E6FF)
+val LightOnPrimaryContainer = Color(0xFF001C3A)
+val LightSecondary = Color(0xFF525F70)
+val LightOnSecondary = Color(0xFFFFFFFF)
+val LightTertiary = Color(0xFFB35C00)
+val LightBackground = Color(0xFFF6F8FC)
+val LightSurface = Color(0xFFFFFFFF)
+val LightSurfaceVariant = Color(0xFFE7ECF4)
+val LightOnSurface = Color(0xFF11141A)
+val LightOnSurfaceVariant = Color(0xFF475060)
+
+val DarkPrimary = Color(0xFF8CC2FF)
+val DarkOnPrimary = Color(0xFF003060)
+val DarkPrimaryContainer = Color(0xFF0A3966)
+val DarkOnPrimaryContainer = Color(0xFFD6E6FF)
+val DarkSecondary = Color(0xFFBAC7DA)
+val DarkOnSecondary = Color(0xFF243140)
+val DarkTertiary = Color(0xFFFFB74D)
+val DarkBackground = Color(0xFF090B10)
+val DarkSurface = Color(0xFF11151E)
+val DarkSurfaceVariant = Color(0xFF1B2130)
+val DarkOnSurface = Color(0xFFF1F4F9)
+val DarkOnSurfaceVariant = Color(0xFF9DA7B8)
