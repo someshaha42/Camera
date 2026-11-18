@@ -2,10 +2,10 @@ package com.example.camera.hardware
 
 import android.media.MediaCodecList
 import android.media.MediaFormat
+import android.util.Size
 import androidx.camera.core.CameraInfo
 import androidx.camera.core.DynamicRange
 import androidx.camera.video.Quality
-import androidx.camera.video.QualitySelector
 import androidx.camera.video.Recorder
 import com.example.camera.model.BitrateSupportInfo
 import com.example.camera.model.EncoderCodecCapabilities
@@ -13,19 +13,29 @@ import com.example.camera.model.HardwareResolution
 import com.example.camera.model.VideoBitrateOption
 
 /**
- * Queries real camera hardware video resolutions (via CameraX VideoCapabilities & QualitySelector)
+ * Queries real camera hardware video resolutions (via CameraX VideoCapabilities using
+ * VIDEO_CAPABILITIES_SOURCE_CODEC_CAPABILITIES when CamcorderProfile is absent)
  * and real H.265/HEVC encoder bitrate ranges (via MediaCodecList).
  * Never hardcodes resolutions or derives resolution from display metrics.
  */
 object VideoCapabilityDetector {
 
     fun queryHardwareResolutions(cameraInfo: CameraInfo): List<HardwareResolution> {
-        val videoCaps = Recorder.getVideoCapabilities(cameraInfo)
+        val videoCaps = runCatching {
+            Recorder.getVideoCapabilities(
+                cameraInfo,
+                Recorder.VIDEO_CAPABILITIES_SOURCE_CODEC_CAPABILITIES,
+            )
+        }.getOrElse {
+            Recorder.getVideoCapabilities(cameraInfo)
+        }
+
         val supportedQualities = videoCaps.getSupportedQualities(DynamicRange.SDR)
         if (supportedQualities.isEmpty()) return emptyList()
 
         val rawList = supportedQualities.mapNotNull { quality ->
-            val size = QualitySelector.getResolution(cameraInfo, quality) ?: return@mapNotNull null
+            val size = standardSizeForCameraXQuality(quality) ?: return@mapNotNull null
+
             HardwareResolution(
                 quality = quality,
                 key = qualityKey(quality),
@@ -105,6 +115,14 @@ object VideoCapabilityDetector {
             maxSupportedBitrateMbps = effectiveUpperMbps,
             bitrateOptions = bitrateOptions,
         )
+    }
+
+    private fun standardSizeForCameraXQuality(quality: Quality): Size? = when (quality) {
+        Quality.UHD -> Size(3840, 2160)
+        Quality.FHD -> Size(1920, 1080)
+        Quality.HD -> Size(1280, 720)
+        Quality.SD -> Size(720, 480)
+        else -> null
     }
 
     private fun qualityKey(quality: Quality): String = when (quality) {

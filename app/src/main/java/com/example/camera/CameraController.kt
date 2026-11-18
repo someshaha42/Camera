@@ -225,13 +225,14 @@ class CameraController(
                 extMgr != null
 
             val effectiveSelector = if (useHardwarePhotoBokeh) {
-                extMgr!!.getExtensionEnabledCameraSelector(baseSelector, ExtensionMode.BOKEH)
+                extMgr.getExtensionEnabledCameraSelector(baseSelector, ExtensionMode.BOKEH)
             } else {
                 baseSelector
             }
             isHardwarePhotoBokehBound = useHardwarePhotoBokeh
 
             glProcessor.updateEffects(effectsSettings, isPhotoHardwareBokehActive = useHardwarePhotoBokeh)
+            val attachGlEffect = effectsSettings.hasActiveGlEffects && !useHardwarePhotoBokeh
 
             val preview = Preview.Builder()
                 .setTargetRotation(currentDeviceRotation)
@@ -274,6 +275,7 @@ class CameraController(
                 }
 
                 val recorder = Recorder.Builder()
+                    .setVideoCapabilitiesSource(Recorder.VIDEO_CAPABILITIES_SOURCE_CODEC_CAPABILITIES)
                     .setQualitySelector(qualitySelector)
                     .setTargetVideoEncodingBitRate(targetBitrateBps)
                     .build()
@@ -295,8 +297,6 @@ class CameraController(
                 val videoCapture = videoCaptureBuilder.build()
                 videoCaptureUseCase = videoCapture
 
-                // Prefer binding Preview + VideoCapture + ImageCapture + real-time GL CameraEffect
-                // Gracefully degrade if device hardware has fewer concurrent stream combinations.
                 val targetsWithPhoto = CameraEffect.PREVIEW or
                     CameraEffect.VIDEO_CAPTURE or
                     CameraEffect.IMAGE_CAPTURE
@@ -308,6 +308,7 @@ class CameraController(
                     preview = preview,
                     videoCapture = videoCapture,
                     imageCapture = imageCapture,
+                    attachGlEffect = attachGlEffect,
                     targetsWithPhoto = targetsWithPhoto,
                     onResult = { simSupported, glSupported ->
                         simultaneousPhotoSupported = simSupported
@@ -322,7 +323,7 @@ class CameraController(
                     selector = effectiveSelector,
                     preview = preview,
                     imageCapture = imageCapture,
-                    allowGlEffect = !useHardwarePhotoBokeh,
+                    allowGlEffect = attachGlEffect,
                     onResult = { glSupported ->
                         realTimeGlSupported = glSupported
                     },
@@ -369,40 +370,43 @@ class CameraController(
         preview: Preview,
         videoCapture: VideoCapture<Recorder>,
         imageCapture: ImageCapture,
+        attachGlEffect: Boolean,
         targetsWithPhoto: Int,
         onResult: (simultaneousSupported: Boolean, glSupported: Boolean) -> Unit,
     ): Camera {
-        // Attempt 1: Preview + VideoCapture + ImageCapture + GL CameraEffect
-        runCatching {
-            val effect = glProcessor.createCameraEffect(targetsWithPhoto)
-            val group = UseCaseGroup.Builder()
-                .addUseCase(preview)
-                .addUseCase(videoCapture)
-                .addUseCase(imageCapture)
-                .addEffect(effect)
-                .build()
-            return provider.bindToLifecycle(lifecycleOwner, selector, group).also {
-                onResult(true, true)
+        if (attachGlEffect) {
+            // Attempt 1 (GL active): Preview + VideoCapture + ImageCapture + GL CameraEffect
+            runCatching {
+                val effect = glProcessor.createCameraEffect(targetsWithPhoto)
+                val group = UseCaseGroup.Builder()
+                    .addUseCase(preview)
+                    .addUseCase(videoCapture)
+                    .addUseCase(imageCapture)
+                    .addEffect(effect)
+                    .build()
+                return provider.bindToLifecycle(lifecycleOwner, selector, group).also {
+                    onResult(true, true)
+                }
+            }
+
+            // Attempt 2 (GL active): Preview + VideoCapture + GL CameraEffect
+            runCatching {
+                val effect = glProcessor.createCameraEffect(
+                    CameraEffect.PREVIEW or CameraEffect.VIDEO_CAPTURE,
+                )
+                val group = UseCaseGroup.Builder()
+                    .addUseCase(preview)
+                    .addUseCase(videoCapture)
+                    .addEffect(effect)
+                    .build()
+                return provider.bindToLifecycle(lifecycleOwner, selector, group).also {
+                    imageCaptureUseCase = null
+                    onResult(false, true)
+                }
             }
         }
 
-        // Attempt 2: Preview + VideoCapture + GL CameraEffect (without simultaneous ImageCapture)
-        runCatching {
-            val effect = glProcessor.createCameraEffect(
-                CameraEffect.PREVIEW or CameraEffect.VIDEO_CAPTURE,
-            )
-            val group = UseCaseGroup.Builder()
-                .addUseCase(preview)
-                .addUseCase(videoCapture)
-                .addEffect(effect)
-                .build()
-            return provider.bindToLifecycle(lifecycleOwner, selector, group).also {
-                imageCaptureUseCase = null
-                onResult(false, true)
-            }
-        }
-
-        // Attempt 3: Preview + VideoCapture + ImageCapture (without GL CameraEffect)
+        // Standard / Fallback 1: Preview + VideoCapture + ImageCapture
         runCatching {
             return provider.bindToLifecycle(
                 lifecycleOwner,
@@ -411,11 +415,11 @@ class CameraController(
                 videoCapture,
                 imageCapture,
             ).also {
-                onResult(true, false)
+                onResult(true, !attachGlEffect)
             }
         }
 
-        // Attempt 4: Baseline Preview + VideoCapture
+        // Standard / Fallback 2: Baseline Preview + VideoCapture
         return provider.bindToLifecycle(
             lifecycleOwner,
             selector,
@@ -423,7 +427,7 @@ class CameraController(
             videoCapture,
         ).also {
             imageCaptureUseCase = null
-            onResult(false, false)
+            onResult(false, !attachGlEffect)
         }
     }
 
@@ -452,7 +456,7 @@ class CameraController(
             }
         }
         return provider.bindToLifecycle(lifecycleOwner, selector, preview, imageCapture).also {
-            onResult(false)
+            onResult(!allowGlEffect)
         }
     }
 

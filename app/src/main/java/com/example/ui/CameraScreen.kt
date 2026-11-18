@@ -421,7 +421,7 @@ private fun CameraViewfinderInterface(
             CameraXViewfinder(
                 surfaceRequest = req,
                 coordinateTransformer = coordinateTransformer,
-                implementationMode = ImplementationMode.EMBEDDED,
+                implementationMode = ImplementationMode.EXTERNAL,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()

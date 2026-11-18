@@ -101,9 +101,11 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
 
                 if (previousFx != combined.effectsSettings) {
                     cameraController.updateLiveEffects(combined.effectsSettings)
-                    // Only rebind if Portrait Extension changed while in PHOTO mode
-                    if (_uiState.value.activeTab == CameraTab.PHOTO &&
+                    val glToggled = previousFx.hasActiveGlEffects != combined.effectsSettings.hasActiveGlEffects
+                    val portraitPhotoToggled = _uiState.value.activeTab == CameraTab.PHOTO &&
                         previousFx.portraitEnabled != combined.effectsSettings.portraitEnabled
+                    if ((glToggled || portraitPhotoToggled) &&
+                        combined.recordingState is RecordingState.Idle
                     ) {
                         triggerBind()
                     }
@@ -364,6 +366,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             state.cameraSettings.selectedBitrateMbps,
             state.cameraSettings.selectedQualityKey,
             state.cameraSettings.fixMirrorEnabled,
+            state.effectsSettings.hasActiveGlEffects,
             if (state.activeTab == CameraTab.PHOTO) state.effectsSettings.portraitEnabled else false,
         ).joinToString("|")
 

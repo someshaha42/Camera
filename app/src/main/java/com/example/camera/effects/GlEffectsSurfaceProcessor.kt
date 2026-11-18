@@ -89,9 +89,8 @@ class GlEffectsSurfaceProcessor : SurfaceProcessor {
         .put(QUAD_TEX_COORDS)
         .apply { position(0) }
 
-    init {
-        glHandler.post { initGl() }
-    }
+    @Volatile
+    private var glInitialized = false
 
     fun updateEffects(settings: EffectsSettings, isPhotoHardwareBokehActive: Boolean) {
         val effectiveBlur = when {
@@ -119,6 +118,10 @@ class GlEffectsSurfaceProcessor : SurfaceProcessor {
             return
         }
         glHandler.post {
+            if (!glInitialized && !released) {
+                initGl()
+                glInitialized = true
+            }
             if (released || eglDisplay == EGL14.EGL_NO_DISPLAY) {
                 request.willNotProvideSurface()
                 return@post
